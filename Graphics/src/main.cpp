@@ -2,6 +2,9 @@
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
 #include <vector>
+#include <fstream>
+#include <string>
+#include <sstream>
 using namespace std;
 
 int gScreenWidth = 640;
@@ -15,27 +18,10 @@ bool gQuit = false;
 GLuint gVertexArrayObject = 0;
 //VBO
 GLuint gVertexBufferObject = 0;
+GLuint gVertexBufferObject2 = 0;
 
 // Program Objecct (for our shaders)
 GLuint gGraphicsPipelineShaderProgram = 0;
-
-
-// We are going to get vertex and fragment shaders from some txt files. but for simplicity, currently we are setting global variables for them 
-const std::string gVertexShaderSource =
-"#version 410 core\n"
-"in vec4 position;\n"
-"void main()\n"
-"{\n"
-"    gl_Position = vec4(position.x,position.y,position.z,position.w);\n"
-"}\n";
-
-const std::string gFragmentShaderSource =
-"#version 410 core\n"
-"out vec4 color;\n"
-"void main()\n"
-"{\n"
-"    color = vec4(1.0f,0.5f,0.0f,1.0f);\n"
-"}\n";
 
 void GOpenGLVersionInfo() {
 	std::cout << "Vendor: " << glGetString(GL_VENDOR) << std::endl;
@@ -143,7 +129,13 @@ void VertexSpecifiation() {
 		 0.5f, -0.5f, 0.0f, // vertex 2
 		 0.0f,  0.5f, 0.0f  // vertex 3
 	};
-	
+
+	const std::vector<GLfloat> vertexColors = {
+		// r     g     b
+		 1.0f, 0.0f, 0.0f, // color for vertex 1
+		 0.0f, 1.0f, 0.0f, // color for vertex 2
+		 0.0f, 0.0f, 1.0f  // color for vertex 3
+	};
 	// We Start setting things up on the GPU
 	glGenVertexArrays(1, &gVertexArrayObject);
 	glBindVertexArray(gVertexArrayObject);
@@ -155,7 +147,8 @@ void VertexSpecifiation() {
 		vertexPositions.size() * sizeof(GLfloat),
 		vertexPositions.data(),
 		GL_STATIC_DRAW);
-	
+
+	// Specify the layout of the vertex data
 	glEnableVertexAttribArray(0);  // Enable the Vertex Attribute Array at index 0 of the buffer array
 	glVertexAttribPointer(0, // Attribute 0 corresponds to the enabled glEnableVertexAttribArray
 		3,                   // size (number of components per vertex attribute)
@@ -164,8 +157,34 @@ void VertexSpecifiation() {
 		0,                   // stride
 		(void*)0             // array buffer offset
 	);
+
+
+
+
+	// Generating second buffer for colors
+	glGenBuffers(1, &gVertexBufferObject2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject2);
+	glBufferData(GL_ARRAY_BUFFER,
+		vertexColors.size() * sizeof(GLfloat),
+		vertexColors.data(),
+		GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(1);  // Enable the Vertex Attribute Array at index 0 of the buffer array
+	glVertexAttribPointer(1, // Attribute 0 corresponds to the enabled glEnableVertexAttribArray
+		3,                   // size (number of components per vertex attribute)
+		GL_FLOAT,            // type
+		GL_FALSE,            // normalized?
+		0,                   // stride ( space between consecutive vertex attributes )
+		(void*)0             // array buffer offset
+	);
+
+
+
+
 	glBindVertexArray(0);
 	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
 }
 
 GLuint CompileShader(GLuint type, const std::string& source) {
@@ -209,6 +228,21 @@ GLuint CompileShader(GLuint type, const std::string& source) {
 
 	return shaderObject;
 }
+std::string LoadShaderAsString(const std::string& filename) {
+	std::string result = "";
+
+	std::string line = "";
+	std::ifstream myFile(filename.c_str());
+
+	if (myFile.is_open()) {
+		while (std::getline(myFile, line)) {
+			result += line + "\n";
+		}
+		myFile.close();
+	}
+	return result;
+}
+
 
 GLuint CreateShaderProgram(const std::string& vertexshadersource, const std::string& fragmentshadersource) {
 	GLuint programObject = glCreateProgram();
@@ -229,7 +263,10 @@ GLuint CreateShaderProgram(const std::string& vertexshadersource, const std::str
 }
 
 void CreateGraphicsPipeline() {
-	gGraphicsPipelineShaderProgram = CreateShaderProgram(gVertexShaderSource, gFragmentShaderSource);
+	std::string vertexShaderSource = LoadShaderAsString("./shaders/vert.glsl");
+	std::string fragmentShaderSource = LoadShaderAsString("./shaders/frag.glsl");
+
+	gGraphicsPipelineShaderProgram = CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
 }
 
 int main(int argc, char* argv[]) {

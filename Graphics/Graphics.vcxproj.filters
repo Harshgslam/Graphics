@@ -22,4 +22,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="shaders\frag.glsl" />
+    <Text Include="shaders\vert.glsl" />
+  </ItemGroup>
 </Project>
